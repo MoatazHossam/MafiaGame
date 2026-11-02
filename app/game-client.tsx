@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {ArrowLeft,CircleHelp,Fingerprint,LoaderCircle,LogOut,WifiOff,X} from 'lucide-react';
+import {CircleHelp,Fingerprint,LoaderCircle,LogOut,WifiOff,X} from 'lucide-react';
 import type {Command,RoomView} from '@/lib/game';
 import {Home} from '@/components/mafia/home';
 import {Rules} from '@/components/mafia/rules';
@@ -41,11 +41,10 @@ export default function MafiaGame({inviteCode}:{inviteCode?:string}={}){
   function dismissInvitation(){setInvitation(null);history.replaceState(null,'','/');}
   async function reclaim(){try{await request({mode:'resume'});stolenRef.current=false;setStolen(false);setNetwork(false);}catch{notify('راجع الاتصال وجرب تاني.');}}
   return <div className={`site ${room&&['night','private','reveal'].includes(room.phase)?'night-mode':''}`}>
-    <header className="site-header"><a className="brand" href="/" aria-label="مافيا الرئيسية"><span className="brand-mark"><Fingerprint size={26}/></span><span>مافيا<span className="brand-dot">.</span><small>كلنا صحاب… لحد ما ييجي الليل</small></span></a><div className="header-actions"><button className="text-button" onClick={()=>setRules(true)}><CircleHelp size={18}/><span>إزاي نلعب؟</span></button>{room&&<button className="icon-button" title="الخروج من الغرفة" aria-label="الخروج من الغرفة" onClick={leave}><LogOut size={18}/></button>}</div></header>
+    <header className="site-header"><a className="brand" href="/" aria-label="مافيا الرئيسية"><span className="brand-mark"><Fingerprint size={26}/></span><span>مافيا<span className="brand-dot">.</span></span></a><div className="header-actions"><button className="text-button" onClick={()=>setRules(true)}><CircleHelp size={18}/><span>إزاي نلعب؟</span></button>{room&&<button className="icon-button" title="الخروج من الغرفة" aria-label="الخروج من الغرفة" onClick={leave}><LogOut size={18}/></button>}</div></header>
     {toast&&<div className="toast" role="status">{toast}<button onClick={()=>setToast('')} aria-label="إغلاق الرسالة"><X size={16}/></button></div>}
     {network&&<div className="connection-banner"><WifiOff size={17}/><span>الاتصال مش مستقر. بنحاول نرجع لنفس الجولة.</span><button onClick={()=>room?poll():reclaim()}>حاول تاني</button></div>}
     {loading?<main className="loading-screen"><Fingerprint size={48}/><LoaderCircle className="spin"/><p>بنجهز القعدة…</p></main>:invitation&&(!room||!invitation.code||room.code!==invitation.code)?<JoinRoom invitation={invitation} existingRoom={room} busy={busy} clientId={client.current} onEnter={enter} onContinue={dismissInvitation} onLeave={leave} onHome={dismissInvitation}/>:!room?<Home busy={busy} onEnter={enter}/>:<RoomBoard room={room} busy={busy} stolen={stolen} command={command} reclaim={reclaim} notify={notify} showRules={()=>setRules(true)}/>}
-    <footer className="site-footer"><span><Fingerprint size={18}/> مافيا<span className="brand-dot">.</span></span><p>المتعة في الشك… والصحوبية تكمل بعد اللعبة.</p><button className="text-button" onClick={()=>setRules(true)}>قواعد القعدة <ArrowLeft size={14}/></button></footer>
     {rules&&<Rules close={()=>setRules(false)}/>}
   </div>;
 }

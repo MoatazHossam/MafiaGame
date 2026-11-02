@@ -4,6 +4,7 @@ import {ArrowLeft,Link as LinkIcon,LoaderCircle,RefreshCw,ShieldCheck,Users} fro
 import type {InviteInfo,InviteRequest} from '@/lib/invitations';
 import type {RoomView} from '@/lib/game';
 import {avatars} from '@/lib/presentation';
+import {AvatarPicker} from './avatar-picker';
 type Props={invitation:InviteRequest;existingRoom:RoomView|null;busy:boolean;clientId:string;onEnter:(data:Record<string,unknown>)=>Promise<string|null>;onContinue:()=>void;onLeave:()=>Promise<void>;onHome:()=>void};
 export function JoinRoom({invitation,existingRoom,busy,clientId,onEnter,onContinue,onLeave,onHome}:Props){
   const [name,setName]=useState(''),[avatar,setAvatar]=useState(0),[info,setInfo]=useState<InviteInfo|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
@@ -23,14 +24,14 @@ export function JoinRoom({invitation,existingRoom,busy,clientId,onEnter,onContin
     if(message){setError(message);return;}
     try{localStorage.setItem('mafia_name',name.trim());localStorage.setItem('mafia_avatar',String(avatar));}catch{}
   }
-  return <main className="invitation-main"><section className="invitation-heading"><span className="invite-icon"><LinkIcon size={26}/></span><span className="eyebrow">صاحبك عازمك على القعدة</span><h1>مكانك مستنيك.</h1><p>اكتب اسمك واختار شخصيتك، وادخل على نفس غرفة أصحابك.</p>{invitation.code&&<div className="invitation-code"><small>أنت داخل على الغرفة</small><strong dir="ltr">{invitation.code}</strong></div>}</section>
+  return <main className="invitation-main"><section className="invitation-heading"><span className="invite-icon"><LinkIcon size={26}/></span><h1>مكانك مستنيك.</h1>{invitation.code&&<div className="invitation-code"><small>كود الغرفة</small><strong dir="ltr">{invitation.code}</strong></div>}</section>
   <section className="entry-card invitation-card">
     {invitation.error?<div className="form-body"><p role="alert" className="inline-error">{invitation.error}</p><button className="secondary full" onClick={onHome}>ارجع للبداية</button></div>:existingRoom?<div className="form-body session-conflict"><ShieldCheck size={32}/><h2>أنت بالفعل في غرفة تانية.</h2><p>الغرفة الحالية: <b dir="ltr">{existingRoom.code}</b>. لينك الدعوة الجديد مش هيغيّر غرفتك أو دورك من غير اختيارك.</p><button className="primary full" onClick={onContinue}>ارجع لغرفتي الحالية <ArrowLeft size={17}/></button>{['lobby','pending','finished','aborted'].includes(existingRoom.phase)?<button className="secondary full" disabled={busy} onClick={onLeave}>غادر الغرفة الحالية وانضم للدعوة</button>:<p className="small-text">المباراة الحالية شغالة. كملها أو اطلب إلغاءها قبل الانتقال.</p>}</div>:
     loading?<div className="form-body invitation-loading"><LoaderCircle className="spin"/><p>بنتأكد من الغرفة…</p></div>:<form onSubmit={submit} className="form-body">
-      {info&&<><h2>قعدة {info.hostName}</h2><p className="invitation-count"><Users size={16}/>{info.count} من 12 موجودين · القبول عند صاحب الغرفة</p></>}
+      {info&&<><h2>قعدة {info.hostName}</h2><p className="invitation-count"><Users size={16}/>{info.count} / 12</p></>}
       {(error||info?.reason)&&<p className="inline-error" role="alert">{error||info?.reason}</p>}
-      {info?.joinable&&<><label htmlFor="join-name">هنناديك إيه؟</label><input autoFocus id="join-name" autoComplete="nickname" placeholder="اسمك في القعدة" value={name} minLength={2} maxLength={24} required onChange={e=>setName(e.target.value)}/><label>اختار شخصيتك <span className="label-note">الشخصيات الباهتة اتاخدت بالفعل</span></label><div className="avatar-picker">{avatars.map((a,i)=><button key={a} type="button" aria-label={`الشخصية ${i+1} ${a}`} aria-pressed={avatar===i} disabled={info.takenAvatars.includes(i)} className={avatar===i?'selected':''} onClick={()=>setAvatar(i)}>{a}</button>)}</div><button className="primary full" type="submit" disabled={busy||name.trim().length<2||avatar<0||info.takenAvatars.includes(avatar)}>{busy?<LoaderCircle size={18} className="spin"/>:<ArrowLeft size={18}/>} انضم لغرفة أصحابك</button><p className="entry-note">الكود متحدد من الدعوة. مش محتاج تكتبه تاني.</p></>}
+      {info?.joinable&&<><label htmlFor="join-name">اسمك</label><input autoFocus id="join-name" autoComplete="nickname" placeholder="اسمك في القعدة" value={name} minLength={2} maxLength={24} required onChange={e=>setName(e.target.value)}/><AvatarPicker value={avatar} onChange={setAvatar} taken={info.takenAvatars}/><button className="primary full" type="submit" disabled={busy||name.trim().length<2||avatar<0||info.takenAvatars.includes(avatar)}>{busy?<LoaderCircle size={18} className="spin"/>:<ArrowLeft size={18}/>} انضم للقعدة</button></>}
       <button className="text-button full" type="button" onClick={()=>setRefresh(n=>n+1)}><RefreshCw size={15}/> تحديث حالة الغرفة</button><button className="text-button full" type="button" onClick={onHome}>عايز تعمل غرفة مختلفة؟</button>
     </form>}
-  </section><p className="small-text centered">كل واحد بموبايله، وكلكم في نفس المكان. التطبيق هو الراوي.</p></main>;
+  </section></main>;
 }

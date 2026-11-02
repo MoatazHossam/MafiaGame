@@ -1,0 +1,65 @@
+/* Public, role-independent characters. All interactions use the existing avatar IDs. */
+.compact-home { padding-top: 28px; padding-bottom: 30px; }
+.compact-home .game-home-layout { align-items: center; gap: 64px; }
+.compact-home .game-entry-column { padding-top: 0; }
+.compact-home .stage-copy h1 { margin: 0 0 12px; }
+.compact-home .game-specs { margin-top: 0; }
+.compact-home .city-stage { height: 360px; margin-top: 15px; }
+.compact-home .scene-card { text-align: center; }
+.compact-home .scene-card > b { display: block; font-size: 14px; padding: 0 0 9px; color: #edcf9c; }
+.compact-home .form-body { padding-top: 20px; }
+.compact-home .form-body > label:first-child { margin-top: 0; }
+.character-picker { margin: 19px 0 21px; min-width: 0; }
+.character-picker-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 12px; }
+.character-picker-heading > b { font-size: 12px; color: #d5dfef; }
+.character-shuffle { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid #56617a; background: #28354e; color: #edce99; border-radius: 8px; font-size: 10px; }
+.character-shuffle:hover:not(:disabled) { background: #384663; transform: rotate(-2deg); }
+.character-shuffle:disabled { opacity: .45; cursor: default; }
+.character-preview { position: relative; display: flex; gap: 15px; align-items: center; min-height: 105px; padding: 9px 12px; margin-bottom: 14px; border: 1px solid #5e6380; border-radius: 13px; background: radial-gradient(ellipse at 90% 30%, #84714935, transparent 65%), #121e33; overflow: hidden; }
+.character-preview:after { content: ''; position: absolute; width: 130px; height: 130px; left: -55px; top: -60px; border: 1px dashed #e8c48d24; border-radius: 50%; pointer-events: none; }
+.character-spotlight { flex-shrink: 0; width: 81px; height: 81px; padding: 3px; border-radius: 23px; border: 1px solid #edca9b91; background: #edca9b13; transform: rotate(5deg); box-shadow: 0 6px 0 #050d1c; animation: character-pop .2s ease-out; }
+.avatar-portrait { display: block; width: 100%; height: 100%; flex-shrink: 0; }
+.character-preview h3 { font-size: 19px; color: #ffe7b6; margin: 0 0 4px; line-height: 1.5; }
+.character-preview p { font-size: 10px; line-height: 1.6; color: #b7c5db; margin: 0; }
+.character-stamp { position: absolute; left: 9px; top: 10px; font-size: 8px; color: #a0d8c5; border: 1px solid #7fb7a467; padding: 1px 5px; border-radius: 3px; transform: rotate(-12deg); }
+.character-grid { display: grid; grid-template-columns: repeat(8,minmax(0,1fr)); gap: 7px; }
+.character-grid > button { position: relative; min-width: 0; min-height: 44px; aspect-ratio: 1; padding: 2px; border: 1px solid #54607b; border-radius: 12px; background: #18273f; box-shadow: 0 3px 0 #0a1223; transition: transform .15s, border-color .15s; }
+.character-grid > button:hover:not(:disabled) { transform: translateY(-3px) rotate(-6deg); border-color: #f6d89e; z-index: 1; }
+.character-grid > button.selected { border: 2px solid #f1c581; padding: 1px; background: #c7a16d; box-shadow: 0 0 0 2px #d9af7430,0 3px 0 #765d40; transform: rotate(4deg); }
+.character-grid > button:disabled .avatar-portrait { opacity: .28; filter: grayscale(1); }
+.character-grid > button:disabled { cursor: not-allowed; }
+.character-state { position: absolute; bottom: -3px; left: -3px; color: #14273d; background: #f1cb89; border-radius: 50%; border: 1px solid #18243b; width: 17px; height: 17px; padding: 2px; }
+.character-grid > button:disabled .character-state { color: #ccd4df; background: #35435c; }
+.character-grid > button:focus-visible,.character-shuffle:focus-visible { outline: 3px solid #9cddd4; outline-offset: 3px; }
+.member-avatar .avatar-portrait,.small-avatar .avatar-portrait,.target > span .avatar-portrait { border-radius: inherit; }
+.member-avatar { overflow: visible; padding: 0; }
+.small-avatar { overflow: hidden; padding: 0; }
+.target > span { padding: 0; overflow: hidden; }
+.pending-member > span { display: inline-flex; align-items: center; gap: 9px; }
+.pending-member .avatar-portrait { width: 36px; height: 36px; }
+.end-player > span { display: block; width: 62px; height: 62px; margin: 0 auto 10px; }
+.site-footer { margin-top: auto; }
+@keyframes character-pop { from { transform: rotate(-8deg) scale(.88); } to { transform: rotate(5deg) scale(1); } }
+@media(max-width: 1100px) { .compact-home .game-home-layout { gap: 32px; } .character-grid { gap: 5px; } .character-grid > button { min-height: 38px; border-radius: 10px; } .character-preview { gap: 10px; padding: 8px; } .character-preview h3 { font-size: 17px; } .character-spotlight { width: 72px; height: 72px; } }
+@media(max-width: 760px) {
+ .compact-home { padding-top: 12px; padding-bottom: 24px; }
+ .compact-home .game-home-layout { gap: 23px; }
+ .compact-home .stage-copy h1 { font-size: 29px; line-height: 1.45; margin: 0 0 10px; }
+ .compact-home .stage-copy h1 br { display: block; }
+ .compact-home .game-specs { gap: 16px; }
+ .compact-home .city-stage { display: none; }
+ .compact-home .form-body { padding: 18px 18px 20px; }
+ .character-picker { margin: 17px 0 20px; }
+ .character-picker-heading > b { font-size: 11px; }
+ .character-preview { min-height: 96px; gap: 12px; padding: 9px 11px; }
+ .character-spotlight { width: 70px; height: 70px; border-radius: 20px; }
+ .character-preview h3 { font-size: 18px; }
+ .character-preview p { font-size: 11px; }
+ .character-grid { grid-template-columns: repeat(8,minmax(0,1fr)); gap: 6px; }
+ .character-grid > button { min-height: 34px; min-width: 0; border-radius: 9px; }
+ .character-state { width: 14px; height: 14px; }
+ .invitation-heading { margin-bottom: 20px; }
+ .invitation-heading h1 { font-size: 27px; }
+}
+@media(max-width: 420px) { .character-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; } .character-grid > button { aspect-ratio: auto; height: 49px; padding: 2px 9px; } .character-grid > button.selected { padding: 1px 8px; } .character-preview h3 { font-size: 17px; } .character-stamp { font-size: 7px; left: 6px; } }
+@media(prefers-reduced-motion: reduce) { .character-spotlight { animation: none; } .character-grid > button { transition: none; } }
