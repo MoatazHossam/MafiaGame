@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./mafia.css";
+import "@fontsource-variable/cairo";
+import "./game-theme.css";
 
 export const metadata: Metadata = {
   title: "مافيا — الليلة فيها خيانة",
