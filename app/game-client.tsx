@@ -6,9 +6,13 @@ import {Home} from '@/components/mafia/home';
 import {Rules} from '@/components/mafia/rules';
 import {RoomBoard} from '@/components/mafia/room-board';
 import {clientId} from '@/lib/client-id';
+import {JoinRoom} from '@/components/mafia/join-room';
+import {readInvitation,invitationPath} from '@/lib/invitations';
+import type {InviteRequest} from '@/lib/invitations';
 type ApiData={room?:RoomView|null;error?:string;code?:string};
-export default function MafiaGame(){
+export default function MafiaGame({inviteCode}:{inviteCode?:string}={}){
   const [room,setRoom]=useState<RoomView|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[network,setNetwork]=useState(false),[stolen,setStolen]=useState(false),[rules,setRules]=useState(false),[toast,setToast]=useState('');
+  const [invitation,setInvitation]=useState<InviteRequest|null>(()=>readInvitation(inviteCode));
   const client=useRef(''),roomRef=useRef<RoomView|null>(null),stolenRef=useRef(false),polling=useRef(false),busyRef=useRef(false),initial=useRef(false);
   const notify=useCallback((text:string)=>setToast(text),[]);
   useEffect(()=>{if(!toast)return;const id=setTimeout(()=>setToast(''),4500);return()=>clearTimeout(id);},[toast]);
@@ -28,18 +32,19 @@ export default function MafiaGame(){
     setNetwork(false);return data;
   },[accept,notify]);
   const poll=useCallback(async()=>{if(polling.current||!roomRef.current||stolenRef.current)return;polling.current=true;try{await request({mode:'poll'});}catch{if(roomRef.current&&!stolenRef.current)setNetwork(true);}finally{polling.current=false;}},[request]);
-  useEffect(()=>{if(initial.current)return;initial.current=true;client.current=clientId();request({mode:'resume'}).catch(()=>setNetwork(true)).finally(()=>setLoading(false));},[request]);
+  useEffect(()=>{if(initial.current)return;initial.current=true;client.current=clientId();setInvitation(readInvitation(inviteCode,location.search));request({mode:'resume'}).catch(()=>setNetwork(true)).finally(()=>setLoading(false));},[request,inviteCode]);
   useEffect(()=>{const id=setInterval(poll,1800);const onFocus=()=>{if(!document.hidden)void poll();};document.addEventListener('visibilitychange',onFocus);window.addEventListener('online',onFocus);return()=>{clearInterval(id);document.removeEventListener('visibilitychange',onFocus);window.removeEventListener('online',onFocus);};},[poll]);
   useEffect(()=>{if(room?.code)window.scrollTo({top:0,behavior:'auto'});},[room?.code]);
-  async function enter(data:Record<string,unknown>){if(busyRef.current)return;busyRef.current=true;setBusy(true);try{await request(data);setNetwork(false);}catch(e){notify(e instanceof Error?e.message:'راجع الاتصال وجرب تاني.');}finally{busyRef.current=false;setBusy(false);}}
+  async function enter(data:Record<string,unknown>):Promise<string|null>{if(busyRef.current)return 'طلبك بيتنفذ. استنى لحظة.';busyRef.current=true;setBusy(true);try{await request(data);setNetwork(false);return null;}catch(e){const message=e instanceof Error?e.message:'راجع الاتصال وجرب تاني.';notify(message);return message;}finally{busyRef.current=false;setBusy(false);}}
   async function command(type:Command['type'],extra:Partial<Command>={}){if(!roomRef.current||busyRef.current)return;busyRef.current=true;setBusy(true);try{await request({mode:'command',command:{id:clientId(),phaseId:roomRef.current.phaseId,type,...extra}},true);}catch(e){notify(e instanceof Error?e.message:'راجع الاتصال وجرب تاني.');}finally{busyRef.current=false;setBusy(false);}}
-  async function leave(){if(room&&!['lobby','pending','finished','aborted'].includes(room.phase)){notify('للخروج مؤقتًا اقفل الصفحة وارجع بنفس المتصفح. صاحب الغرفة يقدر يلغي المباراة.');return;}try{await request({mode:'leave'});accept(null);stolenRef.current=false;setStolen(false);history.replaceState(null,'',location.pathname);}catch(e){notify(e instanceof Error?e.message:'تعذر الخروج. حاول تاني.');}}
+  async function leave(){if(room&&!['lobby','pending','finished','aborted'].includes(room.phase)){notify('للخروج مؤقتًا اقفل الصفحة وارجع بنفس المتصفح. صاحب الغرفة يقدر يلغي المباراة.');return;}try{await request({mode:'leave'});accept(null);stolenRef.current=false;setStolen(false);history.replaceState(null,'',invitation?.code?invitationPath(invitation.code):'/');}catch(e){notify(e instanceof Error?e.message:'تعذر الخروج. حاول تاني.');}}
+  function dismissInvitation(){setInvitation(null);history.replaceState(null,'','/');}
   async function reclaim(){try{await request({mode:'resume'});stolenRef.current=false;setStolen(false);setNetwork(false);}catch{notify('راجع الاتصال وجرب تاني.');}}
   return <div className={`site ${room&&['night','private','reveal'].includes(room.phase)?'night-mode':''}`}>
     <header className="site-header"><a className="brand" href="/" aria-label="مافيا الرئيسية"><span className="brand-mark"><Fingerprint size={26}/></span><span>مافيا<span className="brand-dot">.</span><small>كلنا صحاب… لحد ما ييجي الليل</small></span></a><div className="header-actions"><button className="text-button" onClick={()=>setRules(true)}><CircleHelp size={18}/><span>إزاي نلعب؟</span></button>{room&&<button className="icon-button" title="الخروج من الغرفة" aria-label="الخروج من الغرفة" onClick={leave}><LogOut size={18}/></button>}</div></header>
     {toast&&<div className="toast" role="status">{toast}<button onClick={()=>setToast('')} aria-label="إغلاق الرسالة"><X size={16}/></button></div>}
     {network&&<div className="connection-banner"><WifiOff size={17}/><span>الاتصال مش مستقر. بنحاول نرجع لنفس الجولة.</span><button onClick={()=>room?poll():reclaim()}>حاول تاني</button></div>}
-    {loading?<main className="loading-screen"><Fingerprint size={48}/><LoaderCircle className="spin"/><p>بنجهز القعدة…</p></main>:!room?<Home busy={busy} onEnter={enter}/>:<RoomBoard room={room} busy={busy} stolen={stolen} command={command} reclaim={reclaim} notify={notify} showRules={()=>setRules(true)}/>}
+    {loading?<main className="loading-screen"><Fingerprint size={48}/><LoaderCircle className="spin"/><p>بنجهز القعدة…</p></main>:invitation&&(!room||!invitation.code||room.code!==invitation.code)?<JoinRoom invitation={invitation} existingRoom={room} busy={busy} clientId={client.current} onEnter={enter} onContinue={dismissInvitation} onLeave={leave} onHome={dismissInvitation}/>:!room?<Home busy={busy} onEnter={enter}/>:<RoomBoard room={room} busy={busy} stolen={stolen} command={command} reclaim={reclaim} notify={notify} showRules={()=>setRules(true)}/>}
     <footer className="site-footer"><span><Fingerprint size={18}/> مافيا<span className="brand-dot">.</span></span><p>المتعة في الشك… والصحوبية تكمل بعد اللعبة.</p><button className="text-button" onClick={()=>setRules(true)}>قواعد القعدة <ArrowLeft size={14}/></button></footer>
     {rules&&<Rules close={()=>setRules(false)}/>}
   </div>;

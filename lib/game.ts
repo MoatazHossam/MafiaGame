@@ -1,4 +1,5 @@
 /** Authoritative, transport-independent Mafia rules. Never send Room to a client. */
+import {MIN_PLAYERS,MAX_PLAYERS,roleCounts} from './setup.ts';
 export type Role = 'mafia' | 'doctor' | 'detective' | 'citizen';
 export type Phase = 'lobby' | 'reveal' | 'night' | 'private' | 'dawn' | 'discussion' | 'vote' | 'runoff' | 'result' | 'finished' | 'aborted';
 export type Outcome = 'mafia' | 'town' | 'draw' | null;
@@ -128,10 +129,10 @@ export function applyCommand(r: Room, actorId: string, c: Command, now: number, 
     case 'ready': inPhase('lobby'); if (!actor.accepted) fail('PENDING', 'استنى قبول الدخول.'); actor.ready = c.value === true; break;
     case 'start': {
       host(); inPhase('lobby'); const players = r.players.filter(p => p.accepted);
-      if (players.length < 8 || players.length > 12 || players.some(p => !p.ready)) fail('NOT_READY', 'محتاجين من 8 لـ12 لاعب، وكلهم جاهزين.');
+      if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS || players.some(p => !p.ready)) fail('NOT_READY', 'محتاجين من 4 لـ12 لاعب، وكلهم جاهزين.');
       r.players = players;
-      const mafia = players.length >= 11 ? 3 : 2;
-      const roles: Role[] = [...Array<Role>(mafia).fill('mafia'), 'doctor', 'detective', ...Array<Role>(players.length - mafia - 2).fill('citizen')];
+      const counts = roleCounts(players.length);
+      const roles: Role[] = (Object.entries(counts) as [Role,number][]).flatMap(([role,count])=>Array<Role>(count).fill(role));
       for (let i = roles.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [roles[i], roles[j]] = [roles[j], roles[i]]; }
       players.forEach((p, i) => { p.role = roles[i]; p.alive = true; p.revealed = false; p.confirmed = false; });
       r.history = []; r.outcome = null; r.stagnantCycles = 0; r.nightNumber = 0; r.lastProtected = null;

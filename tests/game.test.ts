@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeRoom, makePlayer, applyCommand, advance, project, checkPresence, addPlayer, RuleError } from '../lib/game.ts';
 import type { Room, Command } from '../lib/game.ts';
+import {roleCounts} from '../lib/setup.ts';
 const NOW = 1800000000000;
 function fixture(n=8) {
   const r = makeRoom('ABCDEFGH',makePlayer(crypto.randomUUID(),'لاعب 0',0,true),NOW);
@@ -14,7 +15,7 @@ function night() {const r=started(); for(const p of r.players)cmd(r,p.id,'confir
 function roles(r:Room){return { mafia:r.players.filter(p=>p.role==='mafia'),doctor:r.players.find(p=>p.role==='doctor')!,detective:r.players.find(p=>p.role==='detective')!,citizen:r.players.find(p=>p.role==='citizen')! };}
 const next=(r:Room)=>{assert.ok(r.endsAt);advance(r,r.endsAt!);};
 test('8–12 players have the exact proposed role counts',()=>{for(let n=8;n<=12;n++){const r=started(n),x=roles(r);assert.equal(x.mafia.length,n>=11?3:2);assert.equal(r.players.filter(p=>p.role==='doctor').length,1);assert.equal(r.players.filter(p=>p.role==='detective').length,1);assert.equal(r.phase,'reveal');}});
-test('host cannot start with fewer than eight or an unready member',()=>{const r=fixture(7);assert.throws(()=>cmd(r,r.hostId,'start'),RuleError);const s=fixture();s.players[2].ready=false;assert.throws(()=>cmd(s,s.hostId,'start'),RuleError);});
+test('host cannot start with fewer than four or an unready member',()=>{const r=fixture(3);assert.throws(()=>cmd(r,r.hostId,'start'),RuleError);const s=fixture();s.players[2].ready=false;assert.throws(()=>cmd(s,s.hostId,'start'),RuleError);});
 test('room is locked after starting',()=>{const r=started();assert.throws(()=>addPlayer(r,makePlayer(crypto.randomUUID(),'غريب',15)),RuleError);});
 test('only host may start or approve',()=>{const r=fixture();assert.throws(()=>cmd(r,r.players[1].id,'start'),RuleError);});
 test('name and avatar uniqueness are enforced',()=>{const r=fixture();assert.throws(()=>addPlayer(r,makePlayer('x','لاعب 0',15)),RuleError);assert.throws(()=>addPlayer(r,makePlayer('y','جديد',0)),RuleError);});
@@ -44,3 +45,20 @@ test('eliminating the last mafia ends in a town win and reveals all roles',()=>{
 test('mafia parity after a night kill ends the match without another vote',()=>{const r=night(),x=roles(r);const town=r.players.filter(p=>p.role!=='mafia');for(const p of town.slice(0,3)){p.alive=false;p.revealed=true;}for(const p of x.mafia)cmd(r,p.id,'night',{sequence:1,target:town[3].id});next(r);next(r);assert.equal(r.outcome,'mafia');next(r);assert.equal(r.phase,'finished');});
 test('a repeated deadline tick cannot resolve the same phase twice',()=>{const r=night(),deadline=r.endsAt!;assert.ok(advance(r,deadline));assert.equal(r.phase,'private');assert.equal(advance(r,deadline),false);assert.equal(r.history.length,0);});
 test('aborted matches do not reveal surviving roles to another player',()=>{const r=night(),x=roles(r);cmd(r,r.hostId,'abort');const view=project(r,x.citizen.id,NOW);assert.ok(view.players.every(p=>p.role===null));assert.equal(view.self.role,null);assert.equal(view.outcome,null);});
+test('every supported count 4–12 produces exactly one complete legal role deck',()=>{
+  for(let n=4;n<=12;n++){
+    const r=started(n),counts=roleCounts(n);
+    for(const [role,count] of Object.entries(counts))assert.equal(r.players.filter(p=>p.role===role).length,count);
+    assert.equal(Object.values(counts).reduce((a,b)=>a+b,0),n);
+    assert.ok(counts.mafia<n/2);
+  }
+  for(const n of [3,13,4.5])assert.throws(()=>roleCounts(n));
+});
+test('four-player games have one mafia and three citizens, and survive the first night into discussion',()=>{
+  const r=started(4);for(const p of r.players)cmd(r,p.id,'confirm');
+  const mafia=r.players.find(p=>p.role==='mafia')!,victim=r.players.find(p=>p.role==='citizen')!;
+  assert.equal(r.players.filter(p=>p.role==='citizen').length,3);
+  cmd(r,mafia.id,'night',{target:victim.id,sequence:1});next(r);next(r);
+  assert.equal(r.outcome,null);assert.equal(r.players.filter(p=>p.alive).length,3);
+  next(r);assert.equal(r.phase,'discussion');
+});

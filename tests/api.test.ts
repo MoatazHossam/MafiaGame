@@ -25,3 +25,41 @@ test('expired rooms cannot be restored',async()=>{const {db,sqlite}=database();t
 test('leaving the last lobby slot deletes the empty room and invalidates its session',async()=>{const {db,sqlite}=database();try{const identity=name(0),a=await call(db,{mode:'create',...identity});const b=await call(db,{mode:'leave',clientId:identity.clientId},a.cookie);assert.equal(b.response.status,200);assert.equal(b.data.room,null);assert.equal((sqlite.prepare('SELECT count(*) n FROM mafia_rooms').get() as any).n,0);assert.equal((sqlite.prepare('SELECT count(*) n FROM mafia_sessions').get() as any).n,0);}finally{sqlite.close();}});
 test('a stale tab cannot sign out a newer tab',async()=>{const {db,sqlite}=database();try{const identity=name(0),a=await call(db,{mode:'create',...identity});const newer=crypto.randomUUID();await call(db,{mode:'resume',clientId:newer},a.cookie);const leave=await call(db,{mode:'leave',clientId:identity.clientId},a.cookie);assert.equal(leave.data.code,'TAB_REPLACED');const poll=await call(db,{mode:'poll',clientId:newer},a.cookie);assert.equal(poll.response.status,200);}finally{sqlite.close();}});
 test('lobby host exit transfers management and removes the old seat',async()=>{const {db,sqlite}=database();try{const host=name(0),a=await call(db,{mode:'create',...host}),guest=name(1),b=await call(db,{mode:'join',code:a.data.room.code,...guest});await call(db,{mode:'command',clientId:host.clientId,command:{id:crypto.randomUUID(),phaseId:1,type:'approve',target:b.data.room.self.id}},a.cookie);await call(db,{mode:'leave',clientId:host.clientId},a.cookie);const next=await call(db,{mode:'poll',clientId:guest.clientId},b.cookie);assert.equal(next.data.room.hostId,b.data.room.self.id);assert.equal(next.data.room.players.length,1);}finally{sqlite.close();}});
+test('a fresh invitation previews only public join information, then joins the exact room and resumes that seat',async()=>{
+  const {db,sqlite}=database();try{
+    const host=name(0),a=await call(db,{mode:'create',...host}),guest=name(1);
+    const preview=await call(db,{mode:'invite',clientId:guest.clientId,code:a.data.room.code});
+    assert.equal(preview.response.status,200);assert.equal(preview.data.invitation.code,a.data.room.code);
+    assert.deepEqual(preview.data.invitation.takenAvatars,[0]);assert.equal(preview.data.invitation.joinable,true);
+    assert.deepEqual(Object.keys(preview.data.invitation).sort(),['code','count','hostName','joinable','reason','takenAvatars'].sort());
+    assert.equal(preview.response.headers.get('set-cookie'),null);
+    const joined=await call(db,{mode:'join',...guest,code:preview.data.invitation.code});
+    assert.equal(joined.data.room.code,a.data.room.code);assert.equal(joined.data.room.phase,'pending');
+    const resume=await call(db,{mode:'resume',clientId:crypto.randomUUID()},joined.cookie);
+    assert.equal(resume.data.room.self.id,joined.data.room.self.id);assert.equal(resume.data.room.code,a.data.room.code);
+  }finally{sqlite.close();}
+});
+test('invitation previews report locked and expired rooms without revealing roles',async()=>{
+  const {db,sqlite}=database();try{
+    const a=await call(db,{mode:'create',...name(0)}),clientId=crypto.randomUUID();
+    const stored=JSON.parse((sqlite.prepare('SELECT state FROM mafia_rooms').get() as any).state);
+    stored.phase='night';stored.players[0].role='mafia';
+    sqlite.prepare('UPDATE mafia_rooms SET state=?').run(JSON.stringify(stored));
+    const locked=await call(db,{mode:'invite',clientId,code:a.data.room.code});
+    assert.equal(locked.data.invitation.joinable,false);assert.ok(locked.data.invitation.reason);
+    assert.ok(!JSON.stringify(locked.data).includes('"role"'));assert.ok(!JSON.stringify(locked.data).includes('"players"'));
+    const expired=await call(db,{mode:'invite',clientId,code:a.data.room.code},'',1800000000000+25*3600000);
+    assert.equal(expired.data.code,'ROOM_NOT_FOUND');
+  }finally{sqlite.close();}
+});
+test('four isolated guest sessions can ready, start and receive the small-group setup',async()=>{
+  const {db,sqlite}=database();try{
+    const host=name(0),first=await call(db,{mode:'create',...host});const clients=[{identity:host,...first}];
+    for(let i=1;i<4;i++){const identity=name(i),guest=await call(db,{mode:'join',code:first.data.room.code,...identity});clients.push({identity,...guest});await call(db,{mode:'command',clientId:host.clientId,command:{id:crypto.randomUUID(),phaseId:1,type:'approve',target:guest.data.room.self.id}},first.cookie);}
+    for(const c of clients)await call(db,{mode:'command',clientId:c.identity.clientId,command:{id:crypto.randomUUID(),phaseId:1,type:'ready',value:true}},c.cookie);
+    const started=await call(db,{mode:'command',clientId:host.clientId,command:{id:crypto.randomUUID(),phaseId:1,type:'start'}},first.cookie);
+    assert.equal(started.response.status,200);assert.equal(started.data.room.phase,'reveal');
+    const stored=JSON.parse((sqlite.prepare('SELECT state FROM mafia_rooms').get() as any).state);
+    assert.equal(stored.players.filter((p:any)=>p.role==='mafia').length,1);assert.equal(stored.players.filter((p:any)=>p.role==='citizen').length,3);
+  }finally{sqlite.close();}
+});

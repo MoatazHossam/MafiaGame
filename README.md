@@ -1,11 +1,11 @@
 # مافيا — MafiaGame
 
-A complete Arabic, mobile-first Mafia party game for **8–12 friends sitting together**. Each player uses their own phone over the internet. The app is the narrator; no player has to sit out to run the game, and no closing eyes is needed.
+A complete Arabic, mobile-first Mafia party game for **4–12 friends sitting together**. Each player uses their own phone over the internet. The app is the narrator; no player has to sit out to run the game, and no closing eyes is needed.
 
 ## Play
 
 1. Create a room, pick a name/avatar, and share the invitation link or QR.
-2. Friends join from their own phones; the host admits them.
+2. Invitation links open a dedicated join screen with a fixed room code; friends choose a name and an available avatar, then the host admits them. Both /join/CODE links and older ?room=CODE links are supported.
 3. Everyone marks ready. The host starts and also plays with an ordinary secret role.
 4. Hold the private card to see your role; release to hide it. Mafia teammates are visible only to their team.
 5. At night everyone uses the same timed selection screen. Mafia choose a victim, the doctor protects, and the detective investigates. Citizens make a personal suspicion choice that is never stored as a target.
@@ -16,6 +16,8 @@ The host cannot see other people's roles or private actions. Eliminated players 
 
 ## Rules implemented
 
+- 4–5 players: 1 mafia and the remaining players are citizens. Short, experimental games without special roles.
+- 6–7 players: 1 mafia, 1 doctor, 1 detective, remaining citizens. Six or more is recommended.
 - 8–10 players: 2 mafia, 1 doctor, 1 detective, remaining citizens.
 - 11–12 players: 3 mafia, 1 doctor, 1 detective, remaining citizens.
 - Fixed 45-second night, 8-second private result stage, public dawn announcement, 60/120/180-second discussion, 30-second vote, and one 20-second runoff when needed.

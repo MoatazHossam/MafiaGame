@@ -6,7 +6,7 @@ const TTL = 24 * 60 * 60 * 1000;
 const cookieName = 'mafia_session';
 const identity = z.object({ name: z.string().trim().min(2).max(24).regex(/^[\p{L}\p{N} ._\-]+$/u), avatar: z.number().int().min(0).max(15) });
 const commandSchema = z.object({ id: z.string().uuid(), phaseId: z.number().int().positive(), type: z.enum(['approve','reject','ready','start','confirm','night','vote','abort','rematch']), target: z.string().uuid().nullable().optional(), value: z.boolean().optional(), sequence: z.number().int().positive().max(100000).optional() }).strict();
-const bodySchema = z.object({ mode: z.enum(['create','join','resume','poll','command','leave']), clientId: z.string().uuid(), name: z.string().optional(), avatar: z.number().optional(), code: z.string().optional(), discussionSeconds: z.number().optional(), command: commandSchema.optional() }).strict();
+const bodySchema = z.object({ mode: z.enum(['create','join','invite','resume','poll','command','leave']), clientId: z.string().uuid(), name: z.string().optional(), avatar: z.number().optional(), code: z.string().optional(), discussionSeconds: z.number().optional(), command: commandSchema.optional() }).strict();
 type Session = { hash: string; room_code: string; member_id: string; client_id: string; expires: number };
 type Stored = { code: string; state: string; version: number; expires: number };
 const random = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
@@ -64,6 +64,17 @@ export async function handleApi(request: Request, db: D1Database, now = Date.now
     if (request.headers.get('sec-fetch-site') === 'cross-site') return response({ error:'طلب غير مسموح.',code:'ORIGIN' },403);
     const body = await limitedJson(request);
     const ip = request.headers.get('cf-connecting-ip') ?? 'local';
+    if (body.mode === 'invite') {
+      await limit(db,`invite:${await hash(ip)}`,60,now);
+      const code = z.string().trim().toUpperCase().regex(/^[A-HJ-NP-Z2-9]{8}$/).parse(body.code);
+      const stored = await db.prepare('SELECT code,state,version,expires FROM mafia_rooms WHERE code=? AND expires>?').bind(code,now).first<Stored>();
+      if (!stored) throw new RuleError('ROOM_NOT_FOUND','الغرفة انتهت أو الكود مش موجود. اطلب لينك جديد من صاحبك.');
+      const room:Room = JSON.parse(stored.state);
+      const full = room.players.length >= 16 || room.players.filter(p=>p.accepted).length >= 12;
+      return response({invitation:{code,hostName:room.players.find(p=>p.id===room.hostId)?.name??'صاحبك',count:room.players.filter(p=>p.accepted).length,
+        takenAvatars:room.players.map(p=>p.avatar),joinable:room.phase==='lobby'&&!full,
+        reason:room.phase!=='lobby'?'المباراة بدأت بالفعل. استنى صاحب الغرفة يبدأ واحدة جديدة.':full?'الغرفة كاملة دلوقتي.':null}});
+    }
     if (body.mode === 'create' || body.mode === 'join') {
       await limit(db,`entry:${await hash(ip)}`,30,now);
       const who = identity.parse({name:body.name,avatar:body.avatar});
