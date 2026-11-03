@@ -8,11 +8,12 @@ A complete Arabic, mobile-first Mafia party game for **4–12 friends sitting to
 2. Invitation links open a dedicated join screen with a fixed room code; friends choose a name and an available avatar, then the host admits them. Both /join/CODE links and older ?room=CODE links are supported.
 3. Everyone marks ready. The host starts and also plays with an ordinary secret role.
 4. Hold the private card to see your role; release to hide it. Mafia teammates are visible only to their team.
-5. At night everyone uses the same timed selection screen. Mafia choose a victim, the doctor protects, and the detective investigates. Citizens make a personal suspicion choice that is never stored as a target.
-6. At dawn the victim's role is revealed. Discuss face-to-face, then vote secretly.
-7. Resolve ties, announce the winning team, reveal all roles, and start a rematch.
+5. Everyone confirms their role. The host presses Next to open discussion first, then Next to open voting. Every later phase also waits for the host.
+6. At night everyone uses the same untimed selection screen. Mafia choose a victim, the doctor protects, and the detective investigates. Citizens make a personal suspicion choice that is never stored as a target.
+7. At dawn the victim's role is revealed. Discuss face-to-face, then vote secretly.
+8. Resolve ties, announce the winning team, reveal all roles, and start a rematch.
 
-The host cannot see other people's roles or private actions. Eliminated players observe public information only. A lost connection pauses fairly for everyone, and the same browser can restore its player session.
+The host cannot see other people's roles or private actions. Eliminated players observe public information only. Putting phones down or losing connectivity does not advance, pause, cancel, or transfer control. The same browser can restore its player session; the host alone advances each stage, including after being eliminated.
 
 ## Rules implemented
 
@@ -20,7 +21,7 @@ The host cannot see other people's roles or private actions. Eliminated players 
 - 6–7 players: 1 mafia, 1 doctor, 1 detective, remaining citizens. Six or more is recommended.
 - 8–10 players: 2 mafia, 1 doctor, 1 detective, remaining citizens.
 - 11–12 players: 3 mafia, 1 doctor, 1 detective, remaining citizens.
-- Fixed 45-second night, 8-second private result stage, public dawn announcement, 60/120/180-second discussion, 30-second vote, and one 20-second runoff when needed.
+- No phase timers or automatic progression: roles → discussion → vote/runoff → result → night → private messages → dawn → discussion. Host-only Next closes the current stage; unsubmitted choices count as abstention/skip. Role reveal waits for everyone to confirm before Next is enabled.
 - Doctor may protect themselves but not the same person on consecutive nights.
 - Tied mafia choices produce no attack. A protected victim survives without a public explanation.
 - Investigation returns mafia/not-mafia to the detective alone, even if the detective dies that night.
@@ -28,7 +29,7 @@ The host cannot see other people's roles or private actions. Eliminated players 
 - Town wins when no mafia remain; mafia win at parity with other living players.
 - Three complete cycles with no elimination end in a draw.
 
-These are explicit game variants, not a claim of universally standard Mafia rules. Balance and timing should be tuned after real group play.
+These are explicit game variants, not a claim of universally standard Mafia rules. Balance should be tuned after real group play.
 
 ## Stack
 

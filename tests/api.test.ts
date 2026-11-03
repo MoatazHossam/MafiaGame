@@ -16,6 +16,61 @@ async function call(db:D1Database,body:Record<string,unknown>,cookie='',now=1800
   const data=await response.json() as any;return {response,data,cookie:response.headers.get('set-cookie')?.split(';')[0]??cookie};
 }
 const name=(n:number)=>({name:`لاعب ${n}`,avatar:n,clientId:crypto.randomUUID()});
+
+async function manualMatch(db:D1Database,n=6){
+  const host=name(0),first=await call(db,{mode:'create',...host});
+  const clients=[{identity:host,...first}];
+  for(let i=1;i<n;i++){
+    const identity=name(i),guest=await call(db,{mode:'join',code:first.data.room.code,...identity});clients.push({identity,...guest});
+    await call(db,{mode:'command',clientId:host.clientId,command:{id:crypto.randomUUID(),phaseId:1,type:'approve',target:guest.data.room.self.id}},first.cookie);
+  }
+  for(const c of clients)await call(db,{mode:'command',clientId:c.identity.clientId,command:{id:crypto.randomUUID(),phaseId:1,type:'ready',value:true}},c.cookie);
+  const started=await call(db,{mode:'command',clientId:host.clientId,command:{id:crypto.randomUUID(),phaseId:1,type:'start'}},first.cookie);
+  assert.equal(started.response.status,200);
+  return {clients,phaseId:started.data.room.phaseId};
+}
+
+test('real API is host-paced, starts with discussion, and never advances or transfers host during long idle periods',async()=>{
+  const {db,sqlite}=database();try{
+    const {clients,phaseId}=await manualMatch(db);const [host,guest]=clients;
+    const send=(c:typeof host,type:string,phaseId:number,extra:Record<string,unknown>={},now=1800000000000)=>call(db,{mode:'command',clientId:c.identity.clientId,command:{id:crypto.randomUUID(),phaseId,type,...extra}},c.cookie,now);
+    const early=await send(host,'next',phaseId);assert.equal(early.data.code,'ROLES_NOT_CONFIRMED');
+    for(const c of clients){const confirmed=await send(c,'confirm',phaseId);assert.equal(confirmed.data.room.phase,'reveal');}
+    const denied=await send(guest,'next',phaseId);assert.equal(denied.data.code,'HOST_ONLY');
+    const later=1800000000000+600000;
+    const idle=await call(db,{mode:'poll',clientId:guest.identity.clientId},guest.cookie,later);
+    assert.equal(idle.data.room.phase,'reveal');assert.equal(idle.data.room.hostId,host.data.room.self.id);
+    assert.ok(!('endsAt'in idle.data.room));assert.ok(!('discussionSeconds'in idle.data.room));
+    const discussion=await send(host,'next',phaseId,{},later);assert.equal(discussion.data.room.phase,'discussion');assert.ok(discussion.data.room.players.every((p:any)=>p.alive));
+    const waiting=await call(db,{mode:'poll',clientId:guest.identity.clientId},guest.cookie,later+600000);assert.equal(waiting.data.room.phase,'discussion');assert.equal(waiting.data.room.hostId,host.data.room.self.id);
+    const vote=await send(host,'next',discussion.data.room.phaseId,{},later+600000);assert.equal(vote.data.room.phase,'vote');
+    const stale=await send(host,'next',discussion.data.room.phaseId,{},later+600000);assert.equal(stale.data.code,'STALE_PHASE');assert.equal(stale.data.room.phase,'vote');
+    const lateChoice=await send(guest,'vote',vote.data.room.phaseId,{target:host.data.room.self.id,sequence:1},later+1200000);assert.equal(lateChoice.response.status,200);
+    const result=await send(host,'next',vote.data.room.phaseId,{},later+1200000);assert.equal(result.data.room.phase,'result');
+    const night=await send(host,'next',result.data.room.phaseId,{},later+1200000);assert.equal(night.data.room.phase,'night');
+    assert.ok(night.data.room.players.every((p:any)=>p.role===null));
+    const repeated={id:crypto.randomUUID(),phaseId:night.data.room.phaseId,type:'next'};
+    const first=await call(db,{mode:'command',clientId:host.identity.clientId,command:repeated},host.cookie,later+1200000);assert.equal(first.data.room.phase,'private');
+    const retry=await call(db,{mode:'command',clientId:host.identity.clientId,command:repeated},host.cookie,later+1200000);assert.equal(retry.data.room.phase,'private');
+  }finally{sqlite.close();}
+});
+
+test('polling a legacy timed and paused room upgrades it without killing anyone or discarding roles',async()=>{
+  const {db,sqlite}=database();try{
+    const {clients}=await manualMatch(db);const [host,guest]=clients;
+    const stored=JSON.parse((sqlite.prepare('SELECT state FROM mafia_rooms').get() as any).state);
+    delete stored.flowVersion;stored.phase='night';stored.endsAt=1800000000000-1;stored.discussionSeconds=60;stored.pause={since:1800000000000-999999,remaining:1000,reason:'connection'};
+    const hostId=stored.hostId,phaseId=stored.phaseId,roles=stored.players.map((p:any)=>p.role);
+    sqlite.prepare('UPDATE mafia_rooms SET state=?').run(JSON.stringify(stored));
+    const poll=await call(db,{mode:'poll',clientId:guest.identity.clientId},guest.cookie,1800000000000+600000);
+    assert.equal(poll.response.status,200);assert.equal(poll.data.room.phase,'night');assert.equal(poll.data.room.hostId,hostId);
+    assert.ok(poll.data.room.players.every((p:any)=>p.alive&&p.role===null));assert.equal(poll.data.room.phaseId,phaseId+1);
+    const migrated=JSON.parse((sqlite.prepare('SELECT state FROM mafia_rooms').get() as any).state);
+    assert.deepEqual(migrated.players.map((p:any)=>p.role),roles);assert.ok(!('endsAt'in migrated));assert.ok(!('pause'in migrated));
+    const old=await call(db,{mode:'command',clientId:host.identity.clientId,command:{id:crypto.randomUUID(),phaseId,type:'next'}},host.cookie,1800000000000+600000);
+    assert.equal(old.data.code,'STALE_PHASE');assert.equal(old.data.room.phase,'night');
+  }finally{sqlite.close();}
+});
 test('API creates a durable room and a protected guest cookie; resume restores it',async()=>{const {db,sqlite}=database();try{const identity=name(0),a=await call(db,{mode:'create',...identity});assert.equal(a.response.status,200);assert.equal(a.data.room.code.length,8);assert.match(a.response.headers.get('set-cookie')!,/HttpOnly/);assert.match(a.response.headers.get('cache-control')!,/no-store/);const b=await call(db,{mode:'resume',clientId:crypto.randomUUID()},a.cookie);assert.equal(b.data.room.self.id,a.data.room.self.id);assert.equal(b.data.room.code,a.data.room.code);}finally{sqlite.close();}});
 test('host approval is required; rejected member loses access; stale tab cannot command',async()=>{const {db,sqlite}=database();try{const host=name(0),a=await call(db,{mode:'create',...host}),guest=name(1),b=await call(db,{mode:'join',code:a.data.room.code,...guest});assert.equal(b.data.room.phase,'pending');const approve={id:crypto.randomUUID(),phaseId:1,type:'approve',target:b.data.room.self.id};const denied=await call(db,{mode:'command',clientId:guest.clientId,command:approve},b.cookie);assert.equal(denied.response.status,409);assert.equal(denied.data.code,'HOST_ONLY');await call(db,{mode:'command',clientId:host.clientId,command:approve},a.cookie);const accepted=await call(db,{mode:'poll',clientId:guest.clientId},b.cookie);assert.equal(accepted.data.room.phase,'lobby');await call(db,{mode:'resume',clientId:crypto.randomUUID()},a.cookie);const old=await call(db,{mode:'command',clientId:host.clientId,command:{id:crypto.randomUUID(),phaseId:1,type:'ready',value:true}},a.cookie);assert.equal(old.data.code,'TAB_REPLACED');}finally{sqlite.close();}});
 test('cross-origin and oversized commands are rejected before state changes',async()=>{const {db,sqlite}=database();try{const bad=await call(db,{mode:'create',...name(0)},'',undefined,'https://evil.test');assert.equal(bad.response.status,403);const long=await call(db,{mode:'create',...name(0),name:'x'.repeat(9000)});assert.equal(long.response.status,409);assert.equal(Number((sqlite.prepare('SELECT count(*) AS n FROM mafia_rooms').get() as any).n),0);}finally{sqlite.close();}});

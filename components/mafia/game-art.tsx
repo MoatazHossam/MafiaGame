@@ -20,6 +20,6 @@ export function RolePortrait({role}:{role:Role}) {
 }
 
 export function RoundTrack({phase}:{phase:string}){
-  const current=['reveal','night','private'].includes(phase)?0:phase==='dawn'?1:phase==='discussion'?2:['vote','runoff','result'].includes(phase)?3:-1;
-  return <div className="round-track" aria-label="مراحل الجولة">{['الليل','النهار','النقاش','التصويت'].map((label,i)=><div key={label} className={`${i===current?'current':''} ${i<current?'complete':''}`} aria-current={i===current?'step':undefined}><span>{i<current?'✓':String(i+1).padStart(2,'0')}</span><b>{label}</b></div>)}</div>;
+  const current=phase==='discussion'?0:['vote','runoff','result'].includes(phase)?1:['night','private'].includes(phase)?2:phase==='dawn'?3:-1;
+  return <div className="round-track" aria-label="مراحل الجولة">{['النقاش','التصويت','الليل','النهار'].map((label,i)=><div key={label} className={`${i===current?'current':''} ${i<current?'complete':''}`} aria-current={i===current?'step':undefined}><span>{i<current?'✓':String(i+1).padStart(2,'0')}</span><b>{label}</b></div>)}</div>;
 }

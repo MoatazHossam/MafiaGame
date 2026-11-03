@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { addPlayer, advance, applyCommand, checkPresence, makePlayer, makeRoom, project, RuleError } from './game.ts';
+import { addPlayer, applyCommand, upgradeRoom, makePlayer, makeRoom, project, RuleError } from './game.ts';
 import type { Room, Command } from './game.ts';
 
 const TTL = 24 * 60 * 60 * 1000;
 const cookieName = 'mafia_session';
 const identity = z.object({ name: z.string().trim().min(2).max(24).regex(/^[\p{L}\p{N} ._\-]+$/u), avatar: z.number().int().min(0).max(15) });
-const commandSchema = z.object({ id: z.string().uuid(), phaseId: z.number().int().positive(), type: z.enum(['approve','reject','ready','start','confirm','night','vote','abort','rematch']), target: z.string().uuid().nullable().optional(), value: z.boolean().optional(), sequence: z.number().int().positive().max(100000).optional() }).strict();
+const commandSchema = z.object({ id: z.string().uuid(), phaseId: z.number().int().positive(), type: z.enum(['approve','reject','ready','start','confirm','night','vote','abort','rematch','next']), target: z.string().uuid().nullable().optional(), value: z.boolean().optional(), sequence: z.number().int().positive().max(100000).optional() }).strict();
+// discussionSeconds is accepted only for compatibility with older cached clients; it has no effect.
 const bodySchema = z.object({ mode: z.enum(['create','join','invite','resume','poll','command','leave']), clientId: z.string().uuid(), name: z.string().optional(), avatar: z.number().optional(), code: z.string().optional(), discussionSeconds: z.number().optional(), command: commandSchema.optional() }).strict();
 type Session = { hash: string; room_code: string; member_id: string; client_id: string; expires: number };
 type Stored = { code: string; state: string; version: number; expires: number };
@@ -41,7 +42,7 @@ async function updateRoom(db: D1Database, s: Session, now: number, seen: Record<
     const stored = await db.prepare('SELECT code,state,version,expires FROM mafia_rooms WHERE code=? AND expires>?').bind(s.room_code,now).first<Stored>();
     if (!stored) throw new RuleError('ROOM_EXPIRED', 'الغرفة انتهت. اعملوا غرفة جديدة.');
     const room: Room = JSON.parse(stored.state); let error: RuleError | null = null;
-    let changed = checkPresence(room, seen, now); changed = advance(room, now) || changed;
+    let changed = upgradeRoom(room);
     if (command) {
       // A rejected command must not commit any partially modified aggregate.
       const copy: Room = structuredClone(room);
@@ -81,10 +82,9 @@ export async function handleApi(request: Request, db: D1Database, now = Date.now
       const member = makePlayer(crypto.randomUUID(),who.name.normalize('NFKC'),who.avatar,body.mode === 'create');
       const token = randomHex(); const tokenHash = await hash(token);
       if (body.mode === 'create') {
-        const discussion = z.union([z.literal(60),z.literal(120),z.literal(180)]).parse(body.discussionSeconds ?? 120);
         const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         const code = Array.from(crypto.getRandomValues(new Uint8Array(8)), n => alphabet[n % alphabet.length]).join('');
-        const room = makeRoom(code,member,now,discussion);
+        const room = makeRoom(code,member,now);
         await db.batch([
           db.prepare('DELETE FROM mafia_rooms WHERE code IN (SELECT code FROM mafia_rooms WHERE expires<? LIMIT 100)').bind(now),
           db.prepare('DELETE FROM mafia_limits WHERE key IN (SELECT key FROM mafia_limits WHERE expires<? LIMIT 1000)').bind(now),

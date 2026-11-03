@@ -8,7 +8,9 @@ This is a recorded architecture change, not an unimplemented PostgreSQL integrat
 
 There is one durable aggregate per room, separate hashed guest sessions, presence rows, and entry/command rate-limit buckets. The whole aggregate is internal to the backend. Browsers receive only explicitly allowed fields, never the serialized room or other players' private choices. The D1 binding is server-only. No database keys or credentials appear in the client bundle.
 
-Phase deadlines are server timestamps, progressed by incoming room requests. The game does not depend on a long-running process or an in-memory timer. If phones disappear, the next request detects missing players and pauses or cancels; it never races through several missed game stages. The room is frozen after a living player's heartbeat is more than 12 seconds old. It resumes on return, with at least 3 seconds to prepare. A 120-second unresolved interruption cancels without awarding a team victory. This is intentionally more tolerant than the original five-second proposal for mobile networks.
+All gameplay transitions require a server-authorized host `next` command with the current phase ID. Time passing, polling, and everyone submitting choices never advance a phase. Roles are confirmed individually; the host then opens discussion before the opening vote. Non-hosts cannot advance, and an eliminated host retains room controls. Repeated command IDs are idempotent; stale phase IDs cannot skip stages. Unsubmitted choices resolve as abstention/skip when the host closes the stage. The private investigation stage and dawn announcements also wait for Next.
+
+There are no timed disconnect pauses, timed cancellation, or automatic host transfers. Presence is an informational online indicator only. The host must remain available to advance the game. Existing rooms from the timed release migrate on their next authenticated request: obsolete deadlines/pause state are removed and the phase ID is incremented, without resolving actions, changing roles, eliminating anyone, or transferring host control. Room/session expiry, rate-limit windows and network polling remain infrastructure concerns rather than gameplay countdowns.
 
 ## Hosting
 
@@ -38,7 +40,7 @@ npm run build
 node scripts/smoke-test.mjs https://YOUR_DEPLOYED_ORIGIN/
 ```
 
-The smoke test creates a disposable room and eight independent guest sessions, checks admission, readiness, per-player role privacy, night actions, duplicate command handling, and cancellation, then leaves the room. Run only against a deployment you own and permit tests on. It does not print cookies or role assignments. Unit/integration tests use real in-memory SQLite with the same migration SQL; they are not a substitute for the HTTP smoke test against D1.
+The smoke test creates a disposable room and eight independent guest sessions, checks admission, readiness, per-player role privacy, host-controlled opening discussion/voting, night actions, duplicate command handling, and cancellation, then leaves the room. Run only against a deployment you own and permit tests on. It does not print cookies or role assignments. Unit/integration tests use real in-memory SQLite with the same migration SQL; they are not a substitute for the HTTP smoke test against D1.
 
 ## Operational boundaries
 

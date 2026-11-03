@@ -10,7 +10,7 @@ async function api(client,payload){
 async function command(client,type,extra={}){return api(client,{mode:'command',command:{id:crypto.randomUUID(),phaseId:client.room.phaseId,type,...extra}});}
 const host=clients[0];let interval;
 try{
-  await api(host,{mode:'create',name:'اختبار الشبكة 0',avatar:0,discussionSeconds:60});
+  await api(host,{mode:'create',name:'اختبار الشبكة 0',avatar:0});
   for(let i=1;i<clients.length;i++){const c=clients[i];await api(c,{mode:'join',name:`اختبار الشبكة ${i}`,avatar:i,code:host.room.code});assert.equal(c.room.phase,'pending');await command(host,'approve',{target:c.room.self.id});}
   for(const c of clients)await api(c,{mode:'poll'});
   interval=setInterval(()=>{void Promise.all(clients.filter(c=>c.cookie).map(c=>api(c,{mode:'poll'}))).catch(e=>{console.error('Heartbeat check failed:',e.message);process.exitCode=1;});},1800);
@@ -19,7 +19,12 @@ try{
   for(const c of clients){await api(c,{mode:'poll'});assert.equal(c.room.phase,'reveal');assert.ok(c.room.self.role);assert.ok(c.room.players.every(p=>p.role===null));}
   for(const c of clients)await command(c,'confirm');
   for(const c of clients)await api(c,{mode:'poll'});
-  assert.ok(clients.every(c=>c.room.phase==='night'));
+  assert.ok(clients.every(c=>c.room.phase==='reveal'));
+  await command(host,'next');assert.equal(host.room.phase,'discussion');
+  await command(host,'next');assert.equal(host.room.phase,'vote');
+  await command(host,'next');assert.equal(host.room.phase,'result');
+  await command(host,'next');assert.equal(host.room.phase,'night');
+  for(const c of clients)await api(c,{mode:'poll'});
   for(const c of clients){await command(c,'night',{target:null,sequence:1});if(c.room.self.role!=='mafia')assert.deepEqual(c.room.self.mafiaChoices,[]);}
   const repeated={id:crypto.randomUUID(),phaseId:host.room.phaseId,type:'night',target:null,sequence:2};
   await api(host,{mode:'command',command:repeated});await api(host,{mode:'command',command:repeated});assert.equal(host.room.self.choice.sequence,2);
