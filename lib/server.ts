@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { addPlayer, applyCommand, upgradeRoom, makePlayer, makeRoom, project, RuleError } from './game.ts';
 import type { Room, Command } from './game.ts';
+import {avatars} from './presentation.ts';
 
 const TTL = 24 * 60 * 60 * 1000;
 const cookieName = 'mafia_session';
-const identity = z.object({ name: z.string().trim().min(2).max(24).regex(/^[\p{L}\p{N} ._\-]+$/u), avatar: z.number().int().min(0).max(15) });
+const identity = z.object({ name: z.string().trim().min(2).max(24).regex(/^[\p{L}\p{N} ._\-]+$/u), avatar: z.number().int().min(0).max(avatars.length-1) });
 const commandSchema = z.object({ id: z.string().uuid(), phaseId: z.number().int().positive(), type: z.enum(['approve','reject','ready','start','confirm','night','vote','abort','rematch','next']), target: z.string().uuid().nullable().optional(), value: z.boolean().optional(), sequence: z.number().int().positive().max(100000).optional() }).strict();
 // discussionSeconds is accepted only for compatibility with older cached clients; it has no effect.
 const bodySchema = z.object({ mode: z.enum(['create','join','invite','resume','poll','command','leave']), clientId: z.string().uuid(), name: z.string().optional(), avatar: z.number().optional(), code: z.string().optional(), discussionSeconds: z.number().optional(), command: commandSchema.optional() }).strict();

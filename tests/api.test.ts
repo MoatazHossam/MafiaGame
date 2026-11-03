@@ -17,6 +17,21 @@ async function call(db:D1Database,body:Record<string,unknown>,cookie='',now=1800
 }
 const name=(n:number)=>({name:`لاعب ${n}`,avatar:n,clientId:crypto.randomUUID()});
 
+test('astronaut avatar persists, appears as occupied in invitations, and cannot be selected twice',async()=>{
+  const {db,sqlite}=database();try{
+    const host={...name(0),avatar:16},first=await call(db,{mode:'create',...host});
+    assert.equal(first.response.status,200);assert.equal(first.data.room.players[0].avatar,16);
+    const preview=await call(db,{mode:'invite',clientId:crypto.randomUUID(),code:first.data.room.code});
+    assert.deepEqual(preview.data.invitation.takenAvatars,[16]);
+    const duplicate=await call(db,{mode:'join',...name(1),avatar:16,code:first.data.room.code});
+    assert.equal(duplicate.data.code,'AVATAR_TAKEN');
+    const invalid=await call(db,{mode:'join',...name(2),avatar:17,code:first.data.room.code});
+    assert.equal(invalid.data.code,'BAD_REQUEST');
+    const resumed=await call(db,{mode:'resume',clientId:host.clientId},first.cookie);
+    assert.equal(resumed.data.room.players[0].avatar,16);
+  }finally{sqlite.close();}
+});
+
 async function manualMatch(db:D1Database,n=6){
   const host=name(0),first=await call(db,{mode:'create',...host});
   const clients=[{identity:host,...first}];

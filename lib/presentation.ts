@@ -1,5 +1,5 @@
 import type {Role} from './game';
-export const avatars=['🦊','🐺','🐻','🦁','🐼','🐯','🐨','🐸','🦉','🐰','🐱','🐙','🦄','🐧','🦝','🐵'];
+export const avatars=['🦊','🐺','🐻','🦁','🐼','🐯','🐨','🐸','🦉','🐰','🐱','🐙','🦄','🐧','🦝','🐵','🧑‍🚀'];
 export const roleNames:Record<Role,string>={mafia:'مافيا',doctor:'الدكتور',detective:'المحقق',citizen:'مواطن'};
 export const roleDescriptions:Record<Role,string>={mafia:'خليك هادي. اتفق مع فريقك على ضحية، وبالنهار اقنع الباقيين إنك بريء.',doctor:'اختار حد تحميه كل ليلة. ممكن تحمي نفسك، بس متحميش نفس الشخص ليلتين ورا بعض.',detective:'حقق مع لاعب كل ليلة، واعرف إذا كان مافيا أو لأ. استخدم المعلومة بذكاء.',citizen:'راقب، اسأل، واربط الكلام ببعضه. اختيارك بالليل مجرد شك شخصي؛ صوتك بالنهار هو اللي بيأثر.'};
 export const phaseNames:Record<string,string>={lobby:'قبل البداية',pending:'طلب دخول',reveal:'الأدوار اتوزعت',night:'المدينة نامت',private:'لحظة سرية',dawn:'طلع النهار',discussion:'وقت المواجهة',vote:'مين المشتبه به؟',runoff:'جولة الحسم',result:'القرار اتاخد',finished:'الليلة خلصت',aborted:'المباراة اتلغت'};

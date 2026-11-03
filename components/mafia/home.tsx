@@ -2,11 +2,11 @@
 import {useEffect,useState} from 'react';
 import {ArrowLeft,Link as LinkIcon,LoaderCircle,Moon,Plus,Users} from 'lucide-react';
 import {CityArtwork} from './art';
-import {AvatarPicker} from './avatar-picker';
+import {AvatarPicker,characters} from './avatar-picker';
 import {RolePortrait} from './game-art';
 export function Home({busy,onEnter}:{busy:boolean;onEnter:(data:Record<string,unknown>)=>Promise<string|null>}){
   const [mode,setMode]=useState<'create'|'join'>('create'),[name,setName]=useState(''),[avatar,setAvatar]=useState(0),[code,setCode]=useState('');
-  useEffect(()=>{try{setName(localStorage.getItem('mafia_name')??'');const a=Number(localStorage.getItem('mafia_avatar'));if(a>=0&&a<16)setAvatar(a);}catch{}},[]);
+  useEffect(()=>{try{setName(localStorage.getItem('mafia_name')??'');const a=Number(localStorage.getItem('mafia_avatar'));if(a>=0&&a<characters.length)setAvatar(a);}catch{}},[]);
   async function enter(e:React.FormEvent){e.preventDefault();const error=await onEnter({mode,name:name.trim(),avatar,...(mode==='join'?{code:code.trim().toUpperCase()}:{})});if(error)return;try{localStorage.setItem('mafia_name',name.trim());localStorage.setItem('mafia_avatar',String(avatar));}catch{}}
   return <main className="game-home compact-home">
     <section className="game-home-layout">

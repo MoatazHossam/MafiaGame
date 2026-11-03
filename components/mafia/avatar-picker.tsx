@@ -19,10 +19,30 @@ export const characters=[
  {name:'بطريق شيك',line:'لابس رسمي عشان التحقيق.',color:'#637c95',bg:'#3c596b',kind:'penguin',prop:'bow'},
  {name:'زلابيا',line:'وشّي كده من غير سبب.',color:'#a5a6b6',bg:'#5c5470',kind:'raccoon',prop:'brow'},
  {name:'قرد اللقطة',line:'استنوا… عندي نظرية!',color:'#c3926b',bg:'#665740',kind:'monkey',prop:'moustache'},
+ {name:'رائد',line:'أنا كنت برّه الكوكب وقت الجريمة!',color:'#e5edf5',bg:'#263d68',kind:'astronaut',prop:'brow'},
 ] as const;
 
 export function AvatarPortrait({index,className=''}:{index:number;className?:string}){
  const c=characters[index]??characters[0],k=c.kind;
+ if(k==='astronaut')return <svg className={`avatar-portrait ${className}`} viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+  <rect x="3" y="3" width="94" height="94" rx="28" fill={c.bg}/>
+  <path d="M14 23h8m-4-4v8M78 13h8m-4-4v8" stroke="#f2d38c" strokeWidth="2" strokeLinecap="round"/><circle cx="85" cy="40" r="2" fill="#b3dce9"/>
+  <path d="M17 100v-9q0-18 21-22h24q21 4 21 22v9" fill="#e5edf5" stroke="#152a46" strokeWidth="2"/>
+  <path d="M25 86v14m50-14v14" stroke="#8faac5" strokeWidth="5"/>
+  <path d="M71 85q17 2 10-21" fill="none" stroke="#b1c7db" strokeWidth="5"/>
+  <rect x="12" y="32" width="12" height="26" rx="5" fill="#9eb9d2" stroke="#152a46" strokeWidth="2"/><rect x="76" y="32" width="12" height="26" rx="5" fill="#9eb9d2" stroke="#152a46" strokeWidth="2"/>
+  <ellipse cx="50" cy="42" rx="34" ry="35" fill="#f1f5f2" stroke="#9bb4cb" strokeWidth="3"/>
+  <ellipse cx="50" cy="43" rx="27" ry="27" fill="#172c4a" stroke="#d8b777" strokeWidth="3"/>
+  <path d="M32 47q0-19 18-19t18 19v8q-3 16-18 16T32 55Z" fill="#edb787"/>
+  <path d="M32 43q-3-20 18-20t18 20l-9-9q-14 9-27 2" fill="#343146"/>
+  <path d="M36 45l8-2m12 0l8-2" stroke="#614734" strokeWidth="2.5" strokeLinecap="round"/>
+  <ellipse cx="41" cy="50" rx="2.5" ry="3.5" fill="#20334a"/><ellipse cx="59" cy="50" rx="2.5" ry="3.5" fill="#20334a"/>
+  <path d="M43 59q7 9 15-1" fill="#fff1d6" stroke="#875f45" strokeWidth="2" strokeLinejoin="round"/>
+  <path d="M29 37q3-13 13-15" fill="none" stroke="#e0f8ff" strokeWidth="4" strokeLinecap="round" opacity=".6"/>
+  <path d="M27 65q23 17 46 0l-3 10q-20 13-40 0Z" fill="#b9ccdc"/>
+  <rect x="37" y="82" width="27" height="16" rx="4" fill="#345579" stroke="#93b5ca" strokeWidth="2"/><path d="M41 87h11" stroke="#9bdfd4" strokeWidth="3" strokeLinecap="round"/><circle cx="57" cy="92" r="2" fill="#f79a84"/>
+  <path d="M27 80l2 4 4 1-4 2-1 4-2-4-4-1 4-2Z" fill="#d4aa59"/>
+ </svg>;
  const pointed=['pointy','cat','unicorn'].includes(k),round=['round','panda','tiger','raccoon','lion'].includes(k);
  return <svg className={`avatar-portrait ${className}`} viewBox="0 0 100 100" aria-hidden="true" focusable="false">
   <rect x="3" y="3" width="94" height="94" rx="28" fill={c.bg}/><circle cx="76" cy="23" r="17" fill="#ffffff0c"/>
